@@ -43,7 +43,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y zip curl jq
-          pip3 install yt-dlp   # ← اضافه شد برای گرفتن توضیحات
 
       - name: 🎯 Request Conversion via API
         id: converter
@@ -268,7 +267,6 @@ jobs:
               f.write(f"{safe_title}\n")
               f.write(f"{OUTPUT_TYPE}\n")
               f.write(f"{QUALITY}\n")
-              f.write(f"{video_id}\n")    # اضافه شد برای استفاده در توضیحات
           
           print(f"{'='*50}")
           print(f"📥 Download URL: {download_url[:80]}...")
@@ -315,37 +313,6 @@ jobs:
           echo "✅ Downloaded: $FILENAME"
           echo "📏 Size: ${FILE_SIZE_MB} MB"
           echo "🎚️ Quality: $QUALITY"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-      # ========== مرحله جدید برای گرفتن توضیحات ویدیو ==========
-      - name: 📝 Fetch Video Description
-        run: |
-          VIDEO_ID=$(sed -n '6p' /tmp/metadata.txt)  # video_id از فایل متادیتا
-          YT_URL="${{ github.event.inputs.url }}"
-          
-          echo "📋 Fetching description for video ID: $VIDEO_ID"
-          
-          # استفاده از yt-dlp برای استخراج توضیحات (بدون دانلود مجدد)
-          DESC_FILE="./downloads/description_${VIDEO_ID}.txt"
-          
-          # گزینه‌ها: فقط توضیحات را چاپ کن و در فایل ذخیره کن
-          yt-dlp --skip-download --print "%(description)s" "$YT_URL" > "$DESC_FILE" 2>/dev/null
-          
-          # اگر فایل خالی بود یا خطایی رخ داد، پیام جایگزین ذخیره کن
-          if [ ! -s "$DESC_FILE" ]; then
-            echo "⚠️ Could not fetch description (maybe private video or restricted)." > "$DESC_FILE"
-            echo "Description not available." >> "$DESC_FILE"
-          fi
-          
-          # اضافه کردن متادیتا مثل عنوان، کانال و... (اختیاری)
-          echo "" >> "$DESC_FILE"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> "$DESC_FILE"
-          echo "Metadata:" >> "$DESC_FILE"
-          yt-dlp --skip-download --print "%(title)s\n%(uploader)s\n%(upload_date)s" "$YT_URL" >> "$DESC_FILE" 2>/dev/null
-          
-          echo "✅ Description saved to: $DESC_FILE"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          cat "$DESC_FILE" | head -20   # نمایش بخشی از توضیحات در لاگ
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: ✂️ Smart Split Large Files
@@ -401,7 +368,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Stage all downloaded files (شامل فایل توضیحات)
+          # Stage all downloaded files
           git add ./downloads/
           
           if git diff --staged --quiet; then
